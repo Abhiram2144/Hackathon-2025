@@ -7,7 +7,6 @@ import {
 import { Suspense, lazy } from "react";
 import { useAuth } from "../contexts/AuthContext";
 
-// 🧩 Lazy load all pages for performance
 const Login = lazy(() => import("../pages/Login"));
 const ModuleSelect = lazy(() => import("../pages/ModuleSelect"));
 const Home = lazy(() => import("../pages/Home"));
@@ -15,14 +14,10 @@ const Discover = lazy(() => import("../pages/Discover"));
 const Chat = lazy(() => import("../pages/ModuleChat"));
 const NotFound = lazy(() => import("../pages/NotFound"));
 const LandingPage = lazy(() => import("../pages/LandingPage"));
-const Account = lazy(() => import("../pages/Account"));
-const Review = lazy(() => import("../pages/Review"));
-const GroupChat = lazy(() => import("../pages/GroupChat"));
-const AdminLogin = lazy(() => import("../pages/AdminLogin"));
-const Dashboard = lazy(() => import("../pages/Dashboard"));
-// const SignUp = lazy(()=> import("../pages/SignUp"))
 
-// 🔐 Protected route wrapper
+const GroupChat = lazy(() => import("../pages/GroupChat"));
+
+
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" />;
@@ -39,38 +34,13 @@ export default function AppRoutes() {
       }
     >
       <Routes>
-        {/* Public Routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/admin/login" element={<AdminLogin />} />
-        {/* <Route path = "/signup" element = {<SignUp/>} /> */}
 
-        {/* Admin Routes */}
-        <Route path="/dashboard" element={<Dashboard />} />
-
-        {/* Protected Routes */}
         <Route
           path="/modules"
           element={
             <ProtectedRoute>
               <ModuleSelect />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/account"
-          element={
-            <ProtectedRoute>
-              <Account />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/review"
-          element={
-            <ProtectedRoute>
-              <Review />
             </ProtectedRoute>
           }
         />

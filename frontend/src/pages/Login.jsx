@@ -313,14 +313,6 @@ const Login = () => {
         </div>
       )}
 
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2">
-        <button
-          onClick={() => navigate("/admin/login")}
-          className="text-sm text-gray-600 hover:text-gray-900 underline hover:cursor-pointer"
-        >
-          Sign in as Admin
-        </button>
-      </div>
     </div>
   );
 };
