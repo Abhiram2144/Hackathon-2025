@@ -93,9 +93,7 @@ const Login = () => {
     const preloadPages = async () => {
       try {
         const home = import("../pages/Home");
-        const account = import("../pages/Account");
-        const review = import("../pages/Review");
-        await Promise.all([home, account, review]);
+        await Promise.all([home]);
       } catch (err) {
         console.warn("⚠️ Page preloading failed:", err);
       }
@@ -183,9 +181,8 @@ const Login = () => {
     const preloadPages = async () => {
       try {
         const home = import("../pages/Home");
-        const account = import("../pages/Account");
-        const review = import("../pages/Review");
-        await Promise.all([home, account, review]);
+
+        await Promise.all([home]);
       } catch (err) {
         console.warn("⚠️ Page preloading failed:", err);
       }
@@ -303,6 +300,16 @@ const Login = () => {
               onClear={() => setMessage("")}
               loading={loading}
             />
+
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                className="w-full rounded-lg border border-transparent bg-white py-2 text-sm font-medium text-primary hover:underline"
+              >
+                🔁 Resend OTP
+              </button>
+            </div>
 
             {message && (
               <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm max-w-md w-full text-center">

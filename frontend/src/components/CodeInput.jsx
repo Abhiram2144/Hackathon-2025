@@ -44,8 +44,8 @@ const CodeInput = ({ onSubmit, onClear, loading = false }) => {
     <StyledWrapper>
       <form className="form" onSubmit={handleVerify}>
         <div className="info">
-          <span className="title">Admin Security Code</span>
-          <p className="description">Enter your 6-digit security code to access the dashboard</p>
+          <span className="title">Enter OTP</span>
+          <p className="description">Enter your 6-digit OTP</p>
         </div>
         <div className="input-fields">
           {[0, 1, 2, 3, 4, 5].map((index) => (

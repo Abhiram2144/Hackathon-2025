@@ -11,6 +11,7 @@ const LoginForm = ({
   onOtpChange,
   onSubmit,
   onSwitch,
+  onResend,
 }) => {
   const navigate = useNavigate();
 
@@ -87,13 +88,15 @@ const LoginForm = ({
               >
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
-              <button
-                type="button"
-                onClick={onSwitch}
-                className=" hover:cursor-pointer text-primary mt-1 border-none bg-none text-sm hover:underline"
-              >
-                🔁 Resend OTP
-              </button>
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={onResend || onSwitch}
+                  className="w-full rounded-lg border border-transparent bg-white py-2 text-sm font-medium text-primary hover:underline"
+                >
+                  🔁 Resend OTP
+                </button>
+              </div>
             </>
           )}
         </form>

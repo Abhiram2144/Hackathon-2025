@@ -10,10 +10,10 @@ import { useAuth } from "../contexts/AuthContext";
 const Login = lazy(() => import("../pages/Login"));
 const ModuleSelect = lazy(() => import("../pages/ModuleSelect"));
 const Home = lazy(() => import("../pages/Home"));
-const Discover = lazy(() => import("../pages/Discover"));
 const Chat = lazy(() => import("../pages/ModuleChat"));
 const NotFound = lazy(() => import("../pages/NotFound"));
 const LandingPage = lazy(() => import("../pages/LandingPage"));
+const Discover = lazy(() => import("../pages/Discover"));
 
 const GroupChat = lazy(() => import("../pages/GroupChat"));
 
@@ -45,7 +45,7 @@ export default function AppRoutes() {
           }
         />
 
-        <Route
+          <Route
           path="/discover"
           element={
             <ProtectedRoute>

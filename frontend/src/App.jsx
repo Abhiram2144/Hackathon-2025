@@ -3,6 +3,7 @@ import AppRoutes from "./routes/AppRoutes";
 import "../src/styles/index.css";
 import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+
 import Loader from "./components/Loader";
 
 function App() {

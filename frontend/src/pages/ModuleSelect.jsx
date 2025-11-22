@@ -5,23 +5,47 @@ import { useAuth } from "../contexts/AuthContext";
 import { X } from "lucide-react";
 
 const ModulesSelect = () => {
+  const [universities, setUniversities] = useState([]);
   const [courses, setCourses] = useState([]);
   const [modules, setModules] = useState([]);
+  const [selectedUniversity, setSelectedUniversity] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [selectedModules, setSelectedModules] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setUserModules, setProfile } = useAuth();
 
+  // Fetch universities on mount
   useEffect(() => {
-    const fetchCourses = async () => {
-      const { data, error } = await supabase.from("courses").select("*");
-      if (error) console.error("Error fetching courses:", error);
-      else setCourses(data);
+    const fetchUniversities = async () => {
+      const { data, error } = await supabase.from("universities").select("*");
+      if (error) console.error("Error fetching universities:", error);
+      else setUniversities(data || []);
     };
-    fetchCourses();
+    fetchUniversities();
   }, []);
 
+  // When university changes, load courses for that university
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!selectedUniversity) {
+        setCourses([]);
+        setSelectedCourse("");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("courses")
+        .select("*")
+        .eq("university", selectedUniversity);
+
+      if (error) console.error("Error fetching courses:", error);
+      else setCourses(data || []);
+    };
+    fetchCourses();
+  }, [selectedUniversity]);
+
+  // When course changes, load modules for that course
   useEffect(() => {
     const fetchModules = async () => {
       if (!selectedCourse) {
@@ -36,7 +60,7 @@ const ModulesSelect = () => {
         .eq("course_id", selectedCourse);
 
       if (error) console.error("Error fetching modules:", error);
-      else setModules(data);
+      else setModules(data || []);
     };
     fetchModules();
   }, [selectedCourse]);
@@ -185,6 +209,23 @@ const ModulesSelect = () => {
           Select Your Course & Modules
         </h1>
 
+        {/* University Dropdown */}
+        <div className="mb-4">
+          <label className="mb-1 block text-sm font-medium">University</label>
+          <select
+            className="w-full rounded-md border border-gray-600 p-2 text-sm focus:ring-1 focus:ring-gray-400 focus:outline-none"
+            value={selectedUniversity}
+            onChange={(e) => setSelectedUniversity(e.target.value)}
+          >
+            <option value="">Select a university</option>
+            {universities.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Course Dropdown */}
         <div className="mb-5">
           <label className="mb-1 block text-sm font-medium">Course</label>
@@ -192,6 +233,7 @@ const ModulesSelect = () => {
             className="w-full rounded-md border border-gray-600 p-2 text-sm focus:ring-1 focus:ring-gray-400 focus:outline-none"
             value={selectedCourse}
             onChange={(e) => setSelectedCourse(e.target.value)}
+            disabled={!selectedUniversity}
           >
             <option value="">Select a course</option>
             {courses.map((c) => (
