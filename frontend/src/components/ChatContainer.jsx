@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Send, Paperclip, Loader2, CornerUpLeft } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Loader2, CornerUpLeft, MoreVertical, Trash2 } from "lucide-react";
+import { supabase } from "../lib/supabaseClient";
 
 export default function ChatContainer({
   chatType, // "group" or "module"
@@ -34,6 +35,52 @@ export default function ChatContainer({
 }) {
   // presence/online count removed
   const isMyMessage = (msg) => msg.userid === student?.id;
+
+  const [menuOpen, setMenuOpen] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const TEN_MINUTES_MS = 10 * 60 * 1000;
+  const canDelete = (msg) => {
+    if (!isMyMessage(msg)) return false;
+    if (!msg?.created_at) return false;
+    const created = new Date(msg.created_at).getTime();
+    return Date.now() - created <= TEN_MINUTES_MS;
+  };
+
+  const handleDeleteMessage = async (msg) => {
+    if (!canDelete(msg)) {
+      alert('You can only delete your messages within 10 minutes.');
+      return;
+    }
+
+    const ok = window.confirm('Delete this message? This cannot be undone.');
+    if (!ok) return;
+
+    try {
+      setDeletingId(msg.id);
+      const { error } = await supabase.from('messages').delete().eq('id', msg.id);
+      if (error) throw error;
+
+      if (setMessages) setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+      setMenuOpen(null);
+    } catch (err) {
+      console.error('Failed to delete message:', err);
+      alert('Failed to delete message. Try again.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // close menu on outside click
+  useEffect(() => {
+    const onDocClick = (e) => {
+      // if click is not inside a menu, close it
+      const menuEl = e.target.closest && e.target.closest('.message-menu');
+      if (!menuEl) setMenuOpen(null);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
 
   // presence/online count removed
 
@@ -93,7 +140,38 @@ export default function ChatContainer({
                       {(msg.students?.displayname || "U")[0].toUpperCase()}
                     </div>
                   ))}
-                <div className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${mine ? "rounded-br-none bg-blue-600 text-white" : "rounded-bl-none bg-gray-200 text-gray-800"}`}>
+                <div className={`relative max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${mine ? "rounded-br-none bg-blue-600 text-white" : "rounded-bl-none bg-gray-200 text-gray-800"}`}>
+                  {mine && (
+                    <div className="absolute top-2" style={{ left: '-48px' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpen(menuOpen === msg.id ? null : msg.id);
+                        }}
+                        className="p-1 bg-white rounded-full shadow-sm text-gray-600 hover:text-gray-800 border border-gray-200"
+                        aria-label="Open message menu"
+                        title="Message menu"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+
+                      {menuOpen === msg.id && (
+                        <div className="message-menu absolute left-0 top-9 z-50 w-44 rounded-md border bg-white shadow-lg">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMessage(msg);
+                            }}
+                            disabled={!canDelete(msg) || deletingId === msg.id}
+                            className={`flex w-full items-center gap-2 px-3 py-2 text-sm text-left text-gray-800 ${!canDelete(msg) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                          >
+                            <Trash2 size={14} />
+                            <span>{deletingId === msg.id ? 'Deleting...' : canDelete(msg) ? 'Delete' : 'Delete (expired)'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {parent && (
                     <div className={`mb-2 rounded-lg border bg-gray-200 ${mine ? "border-blue-400/40 bg-blue-500/20" : "border-gray-300 bg-white/60"} px-3 py-2`}>
                       <div className="text-xs font-semibold text-gray-700">{parent.students?.displayname || "User"}</div>

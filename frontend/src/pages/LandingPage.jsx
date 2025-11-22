@@ -10,11 +10,11 @@ export default function LandingPage() {
       <Navbar />
       <div className="font-inter flex h-screen flex-col items-center justify-center overflow-hidden bg-[#F2EFE8] px-6 pt-0 text-center text-black sm:px-10">
         <h1 className="mb-4 text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
-          ModNet
+          UniChat
         </h1>
         <p className="mb-8 max-w-xs text-base leading-relaxed text-gray-700 sm:max-w-md sm:text-lg">
-          Join real-time discussion channels with classmates studying the same
-          modules — exchange ideas, notes, and motivation.
+          Are you a fresher and worried about your academic queries and communications?
+          UniChat is here to help you connect with your peers effortlessly!
         </p>
 
         <div>
