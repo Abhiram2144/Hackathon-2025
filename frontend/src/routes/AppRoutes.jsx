@@ -16,6 +16,7 @@ const LandingPage = lazy(() => import("../pages/LandingPage"));
 const Discover = lazy(() => import("../pages/Discover"));
 
 const GroupChat = lazy(() => import("../pages/GroupChat"));
+const Chatbot = lazy(() => import("../pages/Chatbot"));
 
 
 const ProtectedRoute = ({ children }) => {
@@ -79,6 +80,15 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute>
               <Chat />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/chatbot"
+          element={
+            <ProtectedRoute>
+              <Chatbot />
             </ProtectedRoute>
           }
         />

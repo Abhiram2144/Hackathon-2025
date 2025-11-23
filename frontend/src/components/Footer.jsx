@@ -12,6 +12,7 @@ export default function Footer() {
   const buttons = [
     { label: "Discover", icon: Compass, path: "/discover" },
     { label: "Home", icon: Home, path: "/home" },
+    { label: "Chatbot", icon: MessageSquare, path: "/chatbot" },
 
   ];
 

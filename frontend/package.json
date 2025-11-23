@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
+    "@n8n/chat": "^0.66.1",
     "@supabase/supabase-js": "^2.84.0",
     "@tailwindcss/vite": "^4.1.17",
     "framer-motion": "^12.23.24",
