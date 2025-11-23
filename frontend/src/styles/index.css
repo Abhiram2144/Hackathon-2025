@@ -1,9 +1,11 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;500;700&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap');
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap");
 
 @theme {
-  --font-inter: "Inter", "sans-serif";
+    /* Use Nunito Sans for the project's primary text variable so components
+      that rely on the custom `font-inter` CSS variable display Nunito Sans. */
+    --font-inter: "Nunito Sans", sans-serif;
   --color-primary: #9b0b21;
   --color-bgprimary: #f2efe8;
 }
@@ -17,5 +19,14 @@ body,
   background-color: #f2efe8;
 }
 body {
-  font-family: "Kaisei Decol", serif;
+  font-family: "Nunito Sans", sans-serif;
+}
+
+/* Ensure all app text uses Nunito Sans. This global rule forces the font across
+   components so utility classes or more-specific selectors do not accidentally
+   leave other fonts in place. If you'd prefer a lighter touch, remove the
+   `!important` below and we can instead map Tailwind's font utilities to the
+   `--font-inter` variable. */
+body, html, #root, * {
+  font-family: "Nunito Sans", sans-serif !important;
 }

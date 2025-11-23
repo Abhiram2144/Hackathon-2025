@@ -27,7 +27,6 @@ const Button = () => {
           }}
         >
           Get started
-          <span className="button-span"> ─ it's free</span>
         </button>
       )}
     </StyledWrapper>

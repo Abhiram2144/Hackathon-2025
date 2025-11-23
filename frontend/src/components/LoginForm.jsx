@@ -26,14 +26,14 @@ const LoginForm = ({
           {step === "email" ? (
             <>
               <div className="flex flex-col gap-2">
-                <label htmlFor="username" className="font-medium text-gray-700">
-                  University username
+                <label htmlFor="email" className="font-medium text-gray-700">
+                  University email
                 </label>
                 <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  placeholder="Enter your university username (e.g. abc123)"
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="Enter your university email (e.g. abc123@student.le.ac.uk)"
                   value={email}
                   onChange={(e) =>
                     onEmailChange({

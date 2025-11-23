@@ -21,14 +21,30 @@ const Login = () => {
     setLoading(true);
     setMessage("");
 
-    // Accept a username and append the university domain.
-    const username = email.trim();
-    if (!username) {
-      setMessage("❌ Please enter your university username.");
+    // Expect a full university email address (e.g. abc123@student.le.ac.uk)
+    const fullEmail = (email || "").trim().toLowerCase();
+    if (!fullEmail) {
+      setMessage("❌ Please enter your university email.");
       setLoading(false);
       return;
     }
-    const fullEmail = `${username}@student.le.ac.uk`;
+
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(fullEmail)) {
+      setMessage("❌ Please enter a valid email address (e.g. abc123@student.le.ac.uk).");
+      setLoading(false);
+      return;
+    }
+
+    // Enforce university domain (accept student.le.ac.uk or le.ac.uk)
+    const allowedDomains = ["student.le.ac.uk", "le.ac.uk"];
+    const domain = fullEmail.split("@")[1] || "";
+    if (!allowedDomains.some((d) => domain === d || domain.endsWith(`.${d}`) || d.endsWith(domain))) {
+      setMessage("❌ Please use your university email (e.g. abc123@student.le.ac.uk).");
+      setLoading(false);
+      return;
+    }
 
     try {
       // Use signInWithOtp directly — let Supabase create the user if needed.
@@ -238,7 +254,7 @@ const Login = () => {
     setMessage("");
 
     if (!email) {
-      setMessage("❌ No email to resend to. Please enter your university username first.");
+      setMessage("❌ No email to resend to. Please enter your university email first.");
       setLoading(false);
       return;
     }
