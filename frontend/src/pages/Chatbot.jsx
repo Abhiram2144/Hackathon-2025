@@ -15,6 +15,7 @@ export default function Chatbot() {
   const [replyTarget, setReplyTarget] = useState(null);
   const messagesEndRef = useRef(null);
   const lastSeenRef = useRef(null);
+  const sessionIdRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2,9)}`);
   const [error, setError] = useState(null);
 
   const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK || null;
@@ -35,10 +36,11 @@ export default function Chatbot() {
 
   const sendToWebhook = async (text) => {
     if (!webhookUrl) throw new Error('No webhook configured (VITE_N8N_WEBHOOK).');
+    const payload = { text, sessionId: sessionIdRef.current };
     const resp = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(payload),
     });
 
     const respText = await resp.text().catch(() => null);
