@@ -36,7 +36,25 @@ export default function Chatbot() {
 
   const sendToWebhook = async (text) => {
     if (!webhookUrl) throw new Error('No webhook configured (VITE_N8N_WEBHOOK).');
-    const payload = { text, sessionId: sessionIdRef.current };
+    // Send multiple aliases and nested bodies for maximum compatibility
+    const payload = {
+      // common aliases
+      text,
+      input: text,
+      message: text,
+      // include chatInput specifically because n8n workflows using the chat trigger expect this key
+      chatInput: text,
+      // nested structures some workflows inspect
+      payload: { text, chatInput: text },
+      body: { text, message: text, input: text, chatInput: text, sessionId: sessionIdRef.current },
+      rawBody: JSON.stringify({ text }),
+      sessionId: sessionIdRef.current,
+      timestamp: Date.now(),
+    };
+    // helpful debug output in browser console
+    console.debug('Sending webhook payload:', payload);
+    // clear previous error when making a fresh request
+    setError(null);
     const resp = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -59,9 +77,49 @@ export default function Chatbot() {
       throw new Error(details);
     }
 
-    // Try common fields
-    const reply = (data && (data.reply || data.text || data.message || (Array.isArray(data) && data[0]?.text))) || null;
-    return reply || (typeof data === 'string' ? data : respText || null);
+    // debug: log response text and parsed data
+    console.debug('Webhook response text:', respText);
+    console.debug('Webhook parsed JSON:', data);
+
+    // Robust reply extraction: common keys and nested values
+    const extractReply = (d) => {
+      if (!d && typeof d !== 'object') return null;
+      if (typeof d === 'string') return d;
+      const keys = ['reply', 'text', 'message', 'output', 'answer', 'response', 'result', 'data'];
+      for (const k of keys) {
+        if (d[k]) {
+          if (typeof d[k] === 'string') return d[k];
+          if (typeof d[k] === 'object') {
+            // try nested text fields
+            if (Array.isArray(d[k]) && d[k][0]) {
+              const first = d[k][0];
+              if (typeof first === 'string') return first;
+              if (first.text) return first.text;
+            }
+            // fallback to JSON stringify of that property
+            try { return JSON.stringify(d[k]); } catch (e) {}
+          }
+        }
+      }
+
+      // If none of the keys matched, try to find first string value in object
+      const findString = (obj) => {
+        if (!obj || typeof obj !== 'object') return null;
+        for (const v of Object.values(obj)) {
+          if (typeof v === 'string' && v.trim()) return v;
+          if (typeof v === 'object') {
+            const nested = findString(v);
+            if (nested) return nested;
+          }
+        }
+        return null;
+      };
+
+      return findString(d) || null;
+    };
+
+    const reply = extractReply(data) || (typeof data === 'string' ? data : respText || null);
+    return reply;
   };
 
   const handleSend = async (e) => {
@@ -75,10 +133,23 @@ export default function Chatbot() {
       students: { displayname: student?.displayname || 'You', profileimage: student?.profileimage || null },
       reply_to_id: replyTarget?.id || null,
     };
+    // append user message
     setMessages((m) => [...m, userMsg]);
     setContent("");
     setReplyTarget(null);
     setSending(true);
+    // show pending AI message while waiting
+    const pendingId = `ai-pending-${Date.now()}`;
+    const pendingMsg = {
+      id: pendingId,
+      created_at: new Date().toISOString(),
+      content: '',
+      userid: 'ai',
+      students: { displayname: 'UniChat', profileimage: null },
+      reply_to_id: userMsg.id,
+      pending: true,
+    };
+    setMessages((m) => [...m, pendingMsg]);
 
     try {
       const aiText = await sendToWebhook(userMsg.content).catch((err) => {
@@ -95,9 +166,20 @@ export default function Chatbot() {
         reply_to_id: userMsg.id,
       };
 
-      setMessages((m) => [...m, aiMsg]);
+      // replace pending message with real ai message
+      setMessages((prev) => prev.map((m) => (m.id === pendingId ? aiMsg : m)));
     } catch (err) {
       console.error('Send failed', err);
+      // replace pending with error message
+      const errorMsg = {
+        id: `ai-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        content: 'Sorry, something went wrong. Try again later.',
+        userid: 'ai',
+        students: { displayname: 'UniChat', profileimage: null },
+        reply_to_id: userMsg.id,
+      };
+      setMessages((prev) => prev.map((m) => (m.id === pendingId ? errorMsg : m)));
     } finally {
       setSending(false);
     }
@@ -130,7 +212,7 @@ export default function Chatbot() {
             student={student}
             allowed={true}
             setAllowed={() => {}}
-            chatInfo={{ name: 'ModNet Assistant' }}
+            chatInfo={{ name: 'UniChat Assistant' }}
             setChatInfo={() => {}}
             messages={messages}
             setMessages={setMessages}
@@ -148,7 +230,7 @@ export default function Chatbot() {
             lastSeenRef={lastSeenRef}
             handleSend={handleSend}
             navigate={navigate}
-            headerTitle={'ModNet Assistant'}
+            headerTitle={'UniChat Assistant'}
             deniedText={''}
             deniedButtonText={''}
             deniedButtonLink={"/"}

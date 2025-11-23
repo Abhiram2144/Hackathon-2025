@@ -186,8 +186,15 @@ export default function ChatContainer({
                   {!mine && (
                     <span className="mb-1 block text-xs text-gray-500">{msg.students?.displayname || "User"}</span>
                   )}
-                  {msg.content && (
-                    <p className="text-sm font-medium">{msg.content}</p>
+                  {msg.pending ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="animate-spin" size={16} />
+                      <span className="text-sm font-medium">Thinking...</span>
+                    </div>
+                  ) : (
+                    msg.content && (
+                      <p className="text-sm font-medium">{msg.content}</p>
+                    )
                   )}
                   {msg.attachment_url && (
                     <a href={msg.attachment_url} target="_blank" rel="noreferrer" className={`mt-1 block text-xs underline ${mine ? "text-blue-100" : "text-blue-600"}`}>{msg.attachment_name || "View Attachment"}</a>
