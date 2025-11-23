@@ -1,171 +1,156 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import ChatContainer from "../components/ChatContainer";
 
-// Chatbot page
-// Behavior:
-// - If `import.meta.env.VITE_CHAT_WIDGET_URL` is set, embed it in an iframe.
-// - Otherwise, attempt a dynamic import of `@n8n/chat` (if the package exposes a browser widget).
-// - Falls back to a helpful message when neither option is available.
-
+// Chatbot implemented using the same chat UI as module chats.
+// AI replies appear on the left (userid = 'ai'), user messages on the right (userid = student.id).
 export default function Chatbot() {
-  const iframeRef = useRef(null);
-  const [status, setStatus] = useState("loading");
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
+  const [student, setStudent] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [content, setContent] = useState("");
+  const [sending, setSending] = useState(false);
+  const [replyTarget, setReplyTarget] = useState(null);
+  const messagesEndRef = useRef(null);
+  const lastSeenRef = useRef(null);
+  const [error, setError] = useState(null);
 
-  const widgetUrl = import.meta.env.VITE_CHAT_WIDGET_URL || null;
-  const envWebhook = import.meta.env.VITE_N8N_WEBHOOK || "";
+  const webhookUrl = import.meta.env.VITE_N8N_WEBHOOK || null;
 
   useEffect(() => {
-    if (widgetUrl) {
-      setStatus("iframe");
-      return;
+    // Build a lightweight `student` object from profile or user
+    if (profile) {
+      setStudent({ id: profile.id, displayname: profile.displayname, profileimage: profile.profileimage });
+    } else if (user) {
+      setStudent({ id: user.id, displayname: user.email?.split('@')[0] || 'You', profileimage: null });
+    }
+  }, [profile, user]);
+
+  useEffect(() => {
+    // scroll to bottom when messages change
+    try { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); } catch (e) {}
+  }, [messages]);
+
+  const sendToWebhook = async (text) => {
+    if (!webhookUrl) throw new Error('No webhook configured (VITE_N8N_WEBHOOK).');
+    const resp = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    const respText = await resp.text().catch(() => null);
+    let data = null;
+    try {
+      data = respText ? JSON.parse(respText) : null;
+    } catch (e) {
+      // not JSON — keep raw text
     }
 
-    // Try to dynamically import @n8n/chat and use its `createChat` API if available.
-    let mounted = true;
-    (async () => {
-      try {
-        const mod = await import("@n8n/chat");
-        if (!mounted) return;
+    if (!resp.ok) {
+      const details = `Webhook error ${resp.status}: ${resp.statusText} — ${respText || '<no body>'}`;
+      console.error(details);
+      // expose to UI
+      setError(details);
+      throw new Error(details);
+    }
 
-        // Newer versions of @n8n/chat export `createChat` helper
-        if (mod && typeof mod.createChat === "function") {
-          setStatus("createChat-ready");
+    // Try common fields
+    const reply = (data && (data.reply || data.text || data.message || (Array.isArray(data) && data[0]?.text))) || null;
+    return reply || (typeof data === 'string' ? data : respText || null);
+  };
 
-          // If we already have a webhook from env, initialize immediately
-          if (envWebhook) {
-            try {
-              mod.createChat({
-                webhookUrl: envWebhook,
-                webhookConfig: { method: "POST", headers: {} },
-                target: "#n8n-chat-root",
-                mode: "window",
-                chatInputKey: "chatInput",
-                chatSessionKey: "sessionId",
-                loadPreviousSession: true,
-                metadata: {},
-                showWelcomeScreen: false,
-                defaultLanguage: "en",
-                initialMessages: ["Hello, how may I help you today?"],
-                i18n: {
-                  en: {
-                    title: "Hi there!",
-                    subtitle:
-                      "Start a chat! We're here to help you with any questions.",
-                    footer: "",
-                    getStarted: "New Conversation",
-                    inputPlaceholder: "Type your question..",
-                  },
-                },
-                enableStreaming: false,
-              });
-              setStatus("mounted");
-            } catch (e) {
-              console.warn("Failed to initialize createChat with env webhook:", e);
-              setStatus("unsupported");
-            }
-          }
-        } else {
-          // Unknown API surface — render a placeholder and show instructions
-          setStatus("unsupported");
-        }
-      } catch (err) {
-        console.warn("@n8n/chat not available or failed to load:", err);
-        if (mounted) setStatus("missing");
-      }
-    })();
-
-    return () => {
-      mounted = false;
+  const handleSend = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!content.trim()) return;
+    const userMsg = {
+      id: `u-${Date.now()}`,
+      created_at: new Date().toISOString(),
+      content,
+      userid: student?.id || 'me',
+      students: { displayname: student?.displayname || 'You', profileimage: student?.profileimage || null },
+      reply_to_id: replyTarget?.id || null,
     };
-  }, [widgetUrl]);
+    setMessages((m) => [...m, userMsg]);
+    setContent("");
+    setReplyTarget(null);
+    setSending(true);
+
+    try {
+      const aiText = await sendToWebhook(userMsg.content).catch((err) => {
+        console.warn('Webhook error', err);
+        return 'Sorry, I could not reach the assistant right now.';
+      });
+
+      const aiMsg = {
+        id: `ai-${Date.now()}`,
+        created_at: new Date().toISOString(),
+        content: aiText || 'No response.',
+        userid: 'ai',
+        students: { displayname: 'ModNet', profileimage: null },
+        reply_to_id: userMsg.id,
+      };
+
+      setMessages((m) => [...m, aiMsg]);
+    } catch (err) {
+      console.error('Send failed', err);
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="font-inter flex min-h-screen flex-col bg-gray-50">
-      <header className="bg-white border-b px-4 py-3">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-lg font-semibold">Chatbot</h1>
-          <p className="mt-1 text-sm text-gray-600">Ask ModNet — powered by your n8n workflow.</p>
-        </div>
-      </header>
-
-      <main className="flex-1 overflow-auto p-4">
-        <div className="max-w-4xl mx-auto">
-          {status === "loading" && (
-            <div className="flex h-64 items-center justify-center text-gray-600">Loading chatbot...</div>
-          )}
-
-          {status === "iframe" && (
-            <div className="rounded-md overflow-hidden border bg-white shadow-sm">
-              <iframe
-                ref={iframeRef}
-                src={widgetUrl}
-                title="Chatbot"
-                className="w-full"
-                style={{ height: 'calc(100vh - 140px)', minHeight: 400 }}
-              />
+      <main className="flex-1 overflow-hidden">
+        <div className="max-w-4xl mx-auto h-[calc(100vh-160px)]">
+          {error && (
+            <div className="mb-3 rounded-md border-l-4 border-red-500 bg-red-50 p-3 text-sm text-red-900">
+              <div className="flex items-start justify-between">
+                <div className="mr-4">{error}</div>
+                <button
+                  className="ml-4 text-red-600 hover:text-red-800"
+                  onClick={() => setError(null)}
+                  aria-label="Dismiss error"
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           )}
 
-          {status === "mounted" && (
-            <div id="n8n-chat-root" className="w-full h-[calc(100vh-140px)] rounded-md border bg-white" />
-          )}
-
-          {status === "createChat-ready" && !envWebhook && (
-            <div className="bg-white rounded-md p-6 shadow">
-              <CreateChatForm onInit={(url, mod) => {
-                try {
-                  mod.createChat({
-                    webhookUrl: url,
-                    webhookConfig: { method: "POST", headers: {} },
-                    target: "#n8n-chat-root",
-                    mode: "window",
-                    chatInputKey: "chatInput",
-                    chatSessionKey: "sessionId",
-                    loadPreviousSession: true,
-                    metadata: {},
-                    showWelcomeScreen: false,
-                    defaultLanguage: "en",
-                    initialMessages: ["Hello, how may I help you today?"],
-                    i18n: {
-                      en: {
-                        title: "Hi there!",
-                        subtitle:
-                          "Start a chat! We're here to help you with any questions.",
-                        footer: "",
-                        getStarted: "New Conversation",
-                        inputPlaceholder: "Type your question..",
-                      },
-                    },
-                    enableStreaming: false,
-                  });
-                  setStatus("mounted");
-                } catch (e) {
-                  console.error("Failed to initialize chat:", e);
-                  setStatus("unsupported");
-                }
-              }} />
-            </div>
-          )}
-
-          {status === "unsupported" && (
-            <div className="rounded-md bg-white p-6 shadow">
-              <h2 className="mb-2 text-lg font-semibold">Chat package found but unknown API</h2>
-              <p className="text-sm text-gray-600">
-                The installed `@n8n/chat` package doesn't expose a known `mount` or `init` function we can call automatically.
-                Please adapt <code>src/pages/Chatbot.jsx</code> to initialize the widget or supply a hosted widget URL in <code>VITE_CHAT_WIDGET_URL</code>.
-              </p>
-            </div>
-          )}
-
-          {status === "missing" && (
-            <div className="rounded-md bg-white p-6 shadow">
-              <h2 className="mb-2 text-lg font-semibold">Chat widget not found</h2>
-              <p className="text-sm text-gray-600">No chat widget was found. Options:</p>
-              <ul className="mt-3 list-inside list-disc text-sm text-gray-600">
-                <li>Set <code>VITE_CHAT_WIDGET_URL</code> in your <code>.env</code> to embed a hosted widget.</li>
-                <li>Install and configure a browser-compatible chat SDK and update this page to initialize it.</li>
-              </ul>
-            </div>
-          )}
+          <ChatContainer
+            chatType="bot"
+            chatId="bot"
+            user={user}
+            profile={profile}
+            student={student}
+            allowed={true}
+            setAllowed={() => {}}
+            chatInfo={{ name: 'ModNet Assistant' }}
+            setChatInfo={() => {}}
+            messages={messages}
+            setMessages={setMessages}
+            content={content}
+            setContent={setContent}
+            file={null}
+            setFile={() => {}}
+            fileError={""}
+            setFileError={() => {}}
+            replyTarget={replyTarget}
+            setReplyTarget={setReplyTarget}
+            sending={sending}
+            setSending={setSending}
+            messagesEndRef={messagesEndRef}
+            lastSeenRef={lastSeenRef}
+            handleSend={handleSend}
+            navigate={navigate}
+            headerTitle={'ModNet Assistant'}
+            deniedText={''}
+            deniedButtonText={''}
+            deniedButtonLink={"/"}
+          />
         </div>
       </main>
     </div>
